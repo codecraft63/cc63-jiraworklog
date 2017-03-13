@@ -21,6 +21,7 @@ class GenerateReportCommand extends Command
         // the short description shown while running "php bin/console list"
         ->setDescription('Creates a new monthly worklog report.')
 
+        ->addArgument('project', InputArgument::REQUIRED, 'The Project Key.')
         ->addArgument('month', InputArgument::REQUIRED, 'The month.')
         ->addArgument('year', InputArgument::REQUIRED, 'The year.')
 
@@ -31,23 +32,27 @@ class GenerateReportCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $project = $input->getArgument('project');
         $start_date = $input->getArgument('year') . '-' . $input->getArgument('month') . '-01';
         $end_date = date("Y-m-t", strtotime($start_date));
 
-        $jql = 'project = FIOP AND due >= '.$start_date.' AND due <= '.$end_date.' ORDER BY created';
+        $jql = 'project = '.$project.' AND due >= '.$start_date.' AND due <= '.$end_date.' ORDER BY created';
         $output->writeln(['JQL: '.$jql, '']);
 
         try {
             $issueService = new IssueService();
 
             $ret = $issueService->search($jql);
+            $output->write('.');
 
             $total = 0;
 
             foreach ($ret->issues as $issue) {
+                $output->write('.');
                 $worklogs = $issueService->getWorklog($issue->key)->getWorklogs();
                 $issue->worklogs = $worklogs;
             }
+            $output->writeln(['', '']);
 
             foreach ($ret->issues as $issue) {
                 $output->writeln([
@@ -65,36 +70,11 @@ class GenerateReportCommand extends Command
             $output->writeln([
                 '',
                 '------------------------------------------------',
-                'TOTAL: '. $this->secsToH($total),
+                'TOTAL: '. round($total / 3600, 2) . ' hours.',
                 '------------------------------------------------'
             ]);
         } catch (JiraException $e) {
             throw  $e;
         }
-    }
-
-    /*
-     * Convert seconds to human readable text.
-     * Found at: http://csl.sublevel3.org/php-secs-to-human-text/
-     *
-     */
-    protected function secsToH($secs)
-    {
-        $units = array(
-            "hour"   =>      3600,
-            "minute" =>        60,
-            "second" =>         1,
-            );
-        // specifically handle zero
-        if ( $secs == 0 ) return "0 seconds";
-        $s = "";
-        foreach ( $units as $name => $divisor ) {
-            if ( $quot = intval($secs / $divisor) ) {
-                $s .= "$quot $name";
-                $s .= (abs($quot) > 1 ? "s" : "") . ", ";
-                $secs -= $quot * $divisor;
-            }
-        }
-        return substr($s, 0, -2);
     }
 }

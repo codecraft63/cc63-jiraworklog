@@ -3,4 +3,4 @@ JIRA worklog report generator
 
 ## Execute
 
-`$ php jirareport.php report <month> <year>`
+`$ php jirareport.php report <projec> <month> <year>`
