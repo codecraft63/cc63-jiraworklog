@@ -8,6 +8,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Worklog report generator command.
@@ -40,40 +41,50 @@ class GenerateReportCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $io = new SymfonyStyle($input, $output);
         $project = $input->getArgument('project');
         $start_date = $input->getArgument('year') . '-' . $input->getArgument('month') . '-01';
         $end_date = date("Y-m-t", strtotime($start_date));
 
         $jql = 'project = '.$project.' AND due >= '.$start_date.' AND due <= '.$end_date.' ORDER BY created';
-        $output->writeln(['JQL: '.$jql, '']);
+        $io->title('JQL: '.$jql);
+        $io->newLine();
+
 
         try {
             $issueService = new IssueService();
+            $io->progressStart(100);
 
             $ret = $issueService->search($jql);
-            $output->write('.');
+            $issues_step = 100 / (count($ret->issues) + 1);
 
             $total = 0;
 
             foreach ($ret->issues as $issue) {
-                $output->write('.');
+                $io->progressAdvance($issues_step);
                 $worklogs = $issueService->getWorklog($issue->key)->getWorklogs();
                 $issue->worklogs = $worklogs;
             }
-            $output->writeln(['', '']);
 
+            $io->progressFinish();
+            $io->newLine(1);
+
+            $data = [];
             foreach ($ret->issues as $issue) {
-                $output->writeln([
-                    $issue->key . ': '. $issue->fields->summary,
-                    '--------------------------------------------------------------'
-                ]);
+                $data[] = [
+                    '<comment>'.$issue->key.'</comment>',
+                    '<comment>'.$issue->fields->summary.'</comment>',
+                    ''
+                ];
                 
                 foreach ($issue->worklogs as $wl) {
-                    $output->writeln($wl->timeSpent . ' | '. $wl->comment);
+                    $comment = substr(preg_replace('/\n\r?/', ' || ', trim($wl->comment)), 0, 60);
+                    $data[] = ['', $comment, utf8_decode($wl->timeSpent)];
                     $total += $wl->timeSpentSeconds;
                 }
-                $output->writeln('');
             }
+
+            $io->table(['Issue', 'Description', 'Time Spent'], $data);
 
             $output->writeln([
                 '',
