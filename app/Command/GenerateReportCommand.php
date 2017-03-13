@@ -9,27 +9,35 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-
+/**
+ * Worklog report generator command.
+ */
 class GenerateReportCommand extends Command
 {
+    /**
+     * {@inheritdoc}
+     */
     protected function configure()
     {
         $this
-        // the name of the command (the part after "bin/console")
+        // the name of the command (the part after "bin/console").
         ->setName('report')
 
-        // the short description shown while running "php bin/console list"
+        // the short description shown while running "php bin/console list".
         ->setDescription('Creates a new monthly worklog report.')
 
         ->addArgument('project', InputArgument::REQUIRED, 'The Project Key.')
         ->addArgument('month', InputArgument::REQUIRED, 'The month.')
         ->addArgument('year', InputArgument::REQUIRED, 'The year.')
 
-        // the full command description shown when running the command with
-        // the "--help" option
+        // the full command description shown when running the command with.
+        // the "--help" option.
         ->setHelp('This command allows you to create a report...');
     }
 
+    /**
+     * {@inheritdoc}
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $project = $input->getArgument('project');
