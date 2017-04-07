@@ -1,3 +1,6 @@
 .env
 .composer.lock
 vendor/
+templates/
+outputs/
+.idea/

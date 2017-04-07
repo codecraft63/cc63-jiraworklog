@@ -2,10 +2,12 @@
 
 namespace App\Command;
 
+use App\Outputer\StaticFactory as OutputerStaticFactory;
 use JiraRestApi\Issue\IssueService;
 use JiraRestApi\JiraException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -30,6 +32,10 @@ class GenerateReportCommand extends Command
         ->addArgument('project', InputArgument::REQUIRED, 'The Project Key.')
         ->addArgument('month', InputArgument::REQUIRED, 'The month.')
         ->addArgument('year', InputArgument::REQUIRED, 'The year.')
+        ->addOption('output', 'o', InputOption::VALUE_OPTIONAL, 'Output type. Default is Console')
+        ->addOption('template', 't', InputOption::VALUE_OPTIONAL, 'Template file')
+        ->addOption('output-dir', 'd', InputOption::VALUE_OPTIONAL, 'Output directory')
+        ->addOption('message', 'm', InputOption::VALUE_OPTIONAL, 'Message')
 
         // the full command description shown when running the command with.
         // the "--help" option.
@@ -67,31 +73,18 @@ class GenerateReportCommand extends Command
             }
 
             $io->progressFinish();
-            $io->newLine(1);
 
-            $data = [];
-            foreach ($ret->issues as $issue) {
-                $data[] = [
-                    '<comment>'.$issue->key.'</comment>',
-                    '<comment>'.$issue->fields->summary.'</comment>',
-                    ''
-                ];
-                
-                foreach ($issue->worklogs as $wl) {
-                    $comment = substr(preg_replace('/\n\r?/', ' || ', trim($wl->comment)), 0, 60);
-                    $data[] = ['', $comment, utf8_decode($wl->timeSpent)];
-                    $total += $wl->timeSpentSeconds;
-                }
+            if (!$output_type = $input->getOption('output')) {
+                $output_type = 'console';
             }
 
-            $io->table(['Issue', 'Description', 'Time Spent'], $data);
+            $output = OutputerStaticFactory::factory($output_type);
+            $output->setIO($io);
+            $output->setData($ret);
+            $output->setOptions($input->getOptions());
+            $output->output();
 
-            $output->writeln([
-                '',
-                '------------------------------------------------',
-                'TOTAL: '. round($total / 3600, 2) . ' hours.',
-                '------------------------------------------------'
-            ]);
+
         } catch (JiraException $e) {
             throw  $e;
         }
