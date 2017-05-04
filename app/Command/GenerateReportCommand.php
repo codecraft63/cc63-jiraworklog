@@ -52,7 +52,8 @@ class GenerateReportCommand extends Command
         $start_date = $input->getArgument('year') . '-' . $input->getArgument('month') . '-01';
         $end_date = date("Y-m-t", strtotime($start_date));
 
-        $jql = 'project = '.$project.' AND due >= '.$start_date.' AND due <= '.$end_date.' ORDER BY created';
+        #$jql = 'project = '.$project.' AND due >= '.$start_date.' AND due <= '.$end_date.' ORDER BY created';
+        $jql = 'project = '.$project.' AND created >= '.$start_date.' AND created <= '.$end_date.' ORDER BY created';
         $io->title('JQL: '.$jql);
         $io->newLine();
 
